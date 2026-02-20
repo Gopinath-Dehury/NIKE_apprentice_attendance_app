@@ -1,92 +1,127 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Attendance App</title>
+    <title>Attendance Grid with Times</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 350px; text-align: center; }
-        h2 { margin-top: 0; color: #333; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; }
+        .box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); width: 100%; max-width: 350px; margin: 0 auto 20px; text-align: center; }
         input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
         button { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; }
-        .in { background: #4A90E2; } .out { background: #50C878; } .adm { background: #9B9B9B; margin-top: 15px; }
-        #adminView { display: none; width: 100%; max-width: 500px; margin-top: 25px; background: white; padding: 20px; border-radius: 12px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
-        .present { color: #28a745; font-weight: bold; }
-        .absent { color: #dc3545; }
+        .in { background: #4A90E2; } .out { background: #50C878; } .adm { background: #9B9B9B; }
+        
+        #adminView { display: none; background: white; padding: 20px; border-radius: 12px; overflow-x: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { border: 1px solid #eee; padding: 8px; text-align: center; min-width: 30px; position: relative; }
+        th { background: #f8f9fa; color: #666; }
+        
+        .p-status { color: #28a745; font-weight: bold; cursor: help; background: #effff4; }
+        .a-status { color: #dc3545; opacity: 0.3; }
+        .name-col { text-align: left; min-width: 140px; font-weight: bold; position: sticky; left: 0; background: white; z-index: 2; border-right: 2px solid #ddd; }
+
+        /* Hover Tooltip Styling */
+        .p-status:hover::after {
+            content: attr(data-time);
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 5px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+            font-size: 10px;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
 
 <div class="box">
-    <h2>Student Portal</h2>
-    <input type="text" id="studentName" placeholder="Enter Full Name">
+    <h2>Attendance</h2>
+    <input type="text" id="studentName" placeholder="Full Name">
     <button class="in" onclick="submitAttendance('checkin')">CHECK IN</button>
     <button class="out" onclick="submitAttendance('checkout')">CHECK OUT</button>
-    <button class="adm" onclick="openAdmin()">Admin Dashboard</button>
+    <button class="adm" onclick="openAdmin()">ADMIN VIEW</button>
 </div>
 
 <div id="adminView">
-    <h3>Monthly Report</h3>
-    <table id="reportTable">
-        <thead>
-            <tr><th>Name</th><th>Present</th><th>Absent</th></tr>
-        </thead>
-        <tbody id="reportData"></tbody>
+    <h3 id="monthTitle" style="text-align:center">Monthly Report</h3>
+    <table id="gridTable">
+        <thead id="gridHead"></thead>
+        <tbody id="gridBody"></tbody>
     </table>
+    <p style="font-size: 11px; color: #666; margin-top: 10px;">* Hover over 'P' to see Check-in/out times.</p>
 </div>
 
 <script>
     const APP_URL = "https://script.google.com/macros/s/AKfycbwFgZBJn9poRH0yuh9QAdtrafV6-W8ZAsgnEJFhGf7NV1Oq3AT48gYOjHMohm8fU4J0qA/exec";
 
     async function submitAttendance(type) {
-        const name = document.getElementById('studentName').value;
-        if (!name) return alert("Please enter your name!");
-        
-        const time = new Date().toLocaleTimeString();
-        const finalUrl = `${APP_URL}?name=${encodeURIComponent(name)}&action=${type}&time=${encodeURIComponent(time)}`;
-        
-        // no-cors is necessary for Google Apps Script Web Apps
-        fetch(finalUrl, { mode: 'no-cors' });
-        alert(`${type.toUpperCase()} recorded for ${name} at ${time}`);
+        const name = document.getElementById('studentName').value.trim();
+        if (!name) return alert("Please enter name");
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        fetch(`${APP_URL}?name=${encodeURIComponent(name)}&action=${type}&time=${encodeURIComponent(time)}`, { mode: 'no-cors' });
+        alert(`${type.toUpperCase()} recorded at ${time}`);
     }
 
     function openAdmin() {
-        const pw = prompt("Admin Password:");
-        if (pw === "1234") fetchStats();
-        else alert("Unauthorized!");
+        if (prompt("Admin Password:") === "1234") fetchGrid();
+        else alert("Wrong password");
     }
 
-    async function fetchStats() {
-        const view = document.getElementById('adminView');
-        const tbody = document.getElementById('reportData');
-        view.style.display = "block";
-        tbody.innerHTML = "Loading...";
+    async function fetchGrid() {
+        document.getElementById('adminView').style.display = "block";
+        const tbody = document.getElementById('gridBody');
+        tbody.innerHTML = "<tr><td>Loading...</td></tr>";
 
         const response = await fetch(APP_URL);
         const data = await response.json();
         
-        const totalDays = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-        const attendance = {};
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        document.getElementById('monthTitle').innerText = `${now.toLocaleString('default', { month: 'long' })} ${year}`;
 
-        // Process data (skip header row)
+        // 1. Header
+        let headHTML = `<tr><th class="name-col">Student Name</th>`;
+        for (let d = 1; d <= daysInMonth; d++) headHTML += `<th>${d}</th>`;
+        document.getElementById('gridHead').innerHTML = headHTML + `</tr>`;
+
+        // 2. Organize Data with Times
+        const attendanceData = {}; 
         data.slice(1).forEach(row => {
             const name = row[0];
-            if (!attendance[name]) attendance[name] = new Set();
-            attendance[name].add(row[1]); // Column 1 is Date
+            const dateStr = row[1];
+            const checkIn = row[2] || '--';
+            const checkOut = row[3] || '--';
+
+            if (!attendanceData[name]) attendanceData[name] = {};
+            attendanceData[name][dateStr] = `In: ${checkIn} | Out: ${checkOut}`;
         });
 
-        tbody.innerHTML = "";
-        for (const student in attendance) {
-            const present = attendance[student].size;
-            const absent = totalDays - present;
-            tbody.innerHTML += `<tr>
-                <td>${student}</td>
-                <td class="present">${present}</td>
-                <td class="absent">${absent}</td>
-            </tr>`;
-        }
+        // 3. Build Body
+        let bodyHTML = "";
+        const students = Object.keys(attendanceData).sort();
+        
+        students.forEach(student => {
+            bodyHTML += `<tr><td class="name-col">${student}</td>`;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const checkDate = `${month + 1}/${d}/${year}`;
+                const timeInfo = attendanceData[student][checkDate];
+                
+                if (timeInfo) {
+                    bodyHTML += `<td class="p-status" data-time="${timeInfo}">P</td>`;
+                } else {
+                    bodyHTML += `<td class="a-status">A</td>`;
+                }
+            }
+            bodyHTML += `</tr>`;
+        });
+        tbody.innerHTML = bodyHTML;
     }
 </script>
 
