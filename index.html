@@ -1,128 +1,91 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Attendance System</title>
+    <title>Attendance App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        :root { --primary: #2563eb; --success: #059669; --bg: #f8fafc; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h2 { color: #1e293b; margin-bottom: 1.5rem; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-        button { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
-        .btn-checkin { background: var(--primary); }
-        .btn-checkout { background: var(--success); }
-        .btn-admin { background: #64748b; margin-top: 20px; }
-        button:active { opacity: 0.8; }
-        
-        #adminArea { display: none; width: 100%; max-width: 600px; margin-top: 30px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e2e8f0; }
-        th { background: #f1f5f9; color: #475569; }
-        .stats-summary { font-weight: bold; color: var(--primary); margin-bottom: 10px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 350px; text-align: center; }
+        h2 { margin-top: 0; color: #333; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; }
+        .in { background: #4A90E2; } .out { background: #50C878; } .adm { background: #9B9B9B; margin-top: 15px; }
+        #adminView { display: none; width: 100%; max-width: 500px; margin-top: 25px; background: white; padding: 20px; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        .present { color: #28a745; font-weight: bold; }
+        .absent { color: #dc3545; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>Student Portal</h2>
-        <input type="text" id="studentName" placeholder="Enter Your Full Name" required>
-        <button class="btn-checkin" onclick="markAttendance('checkin')">Check In</button>
-        <button class="btn-checkout" onclick="markAttendance('checkout')">Check Out</button>
-        <button class="btn-admin" onclick="unlockAdmin()">Admin Console</button>
-    </div>
+<div class="box">
+    <h2>Student Portal</h2>
+    <input type="text" id="studentName" placeholder="Enter Full Name">
+    <button class="in" onclick="submitAttendance('checkin')">CHECK IN</button>
+    <button class="out" onclick="submitAttendance('checkout')">CHECK OUT</button>
+    <button class="adm" onclick="openAdmin()">Admin Dashboard</button>
+</div>
 
-    <div id="adminArea">
-        <h3>Admin Dashboard</h3>
-        <p id="monthInfo" class="stats-summary"></p>
-        <table>
-            <thead>
-                <tr>
-                    <th>Student Name</th>
-                    <th>Present</th>
-                    <th>Absent</th>
-                </tr>
-            </thead>
-            <tbody id="adminBody">
-                </tbody>
-        </table>
-    </div>
+<div id="adminView">
+    <h3>Monthly Report</h3>
+    <table id="reportTable">
+        <thead>
+            <tr><th>Name</th><th>Present</th><th>Absent</th></tr>
+        </thead>
+        <tbody id="reportData"></tbody>
+    </table>
+</div>
 
 <script>
-    // YOUR GOOGLE SCRIPT URL
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxxeEan_ZYtWOyUTnYG_qHsQ_Q1NPkETNFDP4F3yLetdfaXCfxAZ8UjbUdjHX3Q1NWT4A/exec';
+    const APP_URL = "https://script.google.com/macros/s/AKfycbwFgZBJn9poRH0yuh9QAdtrafV6-W8ZAsgnEJFhGf7NV1Oq3AT48gYOjHMohm8fU4J0qA/exec";
 
-    async function markAttendance(action) {
-        const name = document.getElementById('studentName').value.trim();
-        if (!name) {
-            alert("Please enter your name first!");
-            return;
-        }
+    async function submitAttendance(type) {
+        const name = document.getElementById('studentName').value;
+        if (!name) return alert("Please enter your name!");
         
-        const now = new Date();
-        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-        try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors', // Essential for Google Scripts
-                cache: 'no-cache',
-                body: JSON.stringify({ name, action, time: timeString })
-            });
-            alert(`${action === 'checkin' ? 'Checked In' : 'Checked Out'} successfully at ${timeString}`);
-        } catch (error) {
-            alert("Error connecting to database. Try again.");
-        }
+        const time = new Date().toLocaleTimeString();
+        const finalUrl = `${APP_URL}?name=${encodeURIComponent(name)}&action=${type}&time=${encodeURIComponent(time)}`;
+        
+        // no-cors is necessary for Google Apps Script Web Apps
+        fetch(finalUrl, { mode: 'no-cors' });
+        alert(`${type.toUpperCase()} recorded for ${name} at ${time}`);
     }
 
-    function unlockAdmin() {
-        const pass = prompt("Enter Admin Password:");
-        if (pass === "1234") { // Change '1234' to whatever you like
-            showAdmin();
-        } else {
-            alert("Wrong password!");
-        }
+    function openAdmin() {
+        const pw = prompt("Admin Password:");
+        if (pw === "1234") fetchStats();
+        else alert("Unauthorized!");
     }
 
-    async function showAdmin() {
-        const adminArea = document.getElementById('adminArea');
-        const body = document.getElementById('adminBody');
-        adminArea.style.display = 'block';
-        body.innerHTML = '<tr><td colspan="3">Loading data...</td></tr>';
+    async function fetchStats() {
+        const view = document.getElementById('adminView');
+        const tbody = document.getElementById('reportData');
+        view.style.display = "block";
+        tbody.innerHTML = "Loading...";
 
-        try {
-            const response = await fetch(SCRIPT_URL);
-            const data = await response.json();
-            
-            // Logic for Monthly Calculations
-            const now = new Date();
-            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-            document.getElementById('monthInfo').innerText = `Month: ${now.toLocaleString('default', { month: 'long' })} (${daysInMonth} Total Days)`;
+        const response = await fetch(APP_URL);
+        const data = await response.json();
+        
+        const totalDays = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+        const attendance = {};
 
-            const attendanceMap = {};
+        // Process data (skip header row)
+        data.slice(1).forEach(row => {
+            const name = row[0];
+            if (!attendance[name]) attendance[name] = new Set();
+            attendance[name].add(row[1]); // Column 1 is Date
+        });
 
-            // Skip header row and process data
-            data.slice(1).forEach(row => {
-                const name = row[0];
-                const date = row[1];
-                if (!attendanceMap[name]) attendanceMap[name] = new Set();
-                attendanceMap[name].add(date); // Use Set to count unique days
-            });
-
-            body.innerHTML = '';
-            for (const name in attendanceMap) {
-                const presentCount = attendanceMap[name].size;
-                const absentCount = daysInMonth - presentCount;
-                body.innerHTML += `
-                    <tr>
-                        <td>${name}</td>
-                        <td style="color:green; font-weight:bold;">${presentCount}</td>
-                        <td style="color:red;">${absentCount}</td>
-                    </tr>`;
-            }
-        } catch (error) {
-            body.innerHTML = '<tr><td colspan="3">Failed to load data. Ensure your Sheet is shared "Anyone with link".</td></tr>';
+        tbody.innerHTML = "";
+        for (const student in attendance) {
+            const present = attendance[student].size;
+            const absent = totalDays - present;
+            tbody.innerHTML += `<tr>
+                <td>${student}</td>
+                <td class="present">${present}</td>
+                <td class="absent">${absent}</td>
+            </tr>`;
         }
     }
 </script>
