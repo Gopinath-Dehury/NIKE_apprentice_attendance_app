@@ -3,33 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Attendance System</title>
+    <title>Attendance Manager</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
-        .box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); width: 100%; max-width: 380px; margin: 0 auto 30px; text-align: center; }
-        h2 { margin-bottom: 20px; color: #4A90E2; }
-        select, input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
-        button { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; transition: transform 0.1s; }
-        button:active { transform: scale(0.97); }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; color: #333; text-align: center; }
+        .box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); width: 100%; max-width: 400px; margin: 0 auto 25px; }
+        select, input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .in { background: #4A90E2; } .out { background: #50C878; } .adm { background: #6c757d; margin-top: 10px; }
-        .add-btn { background: #f39c12; margin-top: 5px; width: auto; padding: 10px 20px; }
-        
-        #adminView { display: none; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); max-width: 950px; margin: 0 auto; }
-        .admin-section { border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; text-align: left; }
-        .scroll-table { overflow-x: auto; margin-top: 10px; border-radius: 8px; border: 1px solid #eee; }
+        .add-btn { background: #f39c12; width: auto; padding: 10px 20px; }
+        #adminView { display: none; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); max-width: 950px; margin: 0 auto; text-align: left; }
+        .scroll-table { overflow-x: auto; margin-top: 15px; border: 1px solid #eee; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
         th, td { border: 1px solid #eee; padding: 10px; text-align: center; min-width: 35px; position: relative; }
-        th { background: #f8f9fa; color: #666; font-weight: 600; }
-        
-        .p-status { color: #28a745; font-weight: bold; cursor: help; background: #effff4; border-radius: 4px; }
-        .a-status { color: #dc3545; opacity: 0.25; }
         .name-col { text-align: left; min-width: 150px; font-weight: bold; position: sticky; left: 0; background: white; z-index: 2; border-right: 2px solid #ddd; }
-
-        /* Hover Tooltip */
+        .p-status { color: #28a745; font-weight: bold; cursor: help; background: #effff4; }
+        .a-status { color: #dc3545; opacity: 0.25; }
         .p-status:hover::after {
             content: attr(data-time); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
-            background: #333; color: white; padding: 6px 10px; border-radius: 5px;
-            white-space: nowrap; font-size: 10px; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            background: #333; color: white; padding: 6px; border-radius: 5px; white-space: nowrap; z-index: 100;
         }
     </style>
 </head>
@@ -37,168 +28,85 @@
 
 <div class="box">
     <h2>Attendance</h2>
-    <select id="studentSelect">
-        <option value="">-- Loading Names... --</option>
-    </select>
+    <select id="studentSelect"><option value="">Loading names...</option></select>
     <button class="in" onclick="submitAttendance('checkin')">LOG CHECK IN</button>
     <button class="out" onclick="submitAttendance('checkout')">LOG CHECK OUT</button>
-    <button class="adm" onclick="openAdmin()">ADMIN PANEL</button>
+    <button class="adm" onclick="openAdmin()">ADMIN VIEW</button>
 </div>
 
 <div id="adminView">
-    <h3 style="text-align:center; color: #4A90E2;">Admin Dashboard</h3>
-    
-    <div class="admin-section">
-        <label><b>Add New User to Dropdown:</b></label>
-        <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
-            <input type="text" id="newUserName" placeholder="Full Name" style="margin-bottom: 0;">
-            <button class="add-btn" onclick="addNewUser()">+ ADD NAME</button>
+    <h3 style="text-align:center">Admin Dashboard</h3>
+    <div style="border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px;">
+        <label><b>Manage Students:</b></label>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <input type="text" id="newUserName" placeholder="Full Name" style="margin-bottom:0">
+            <button class="add-btn" onclick="addNewUser()">ADD NEW</button>
         </div>
     </div>
-
     <div class="scroll-table">
-        <table id="gridTable">
-            <thead id="gridHead"></thead>
-            <tbody id="gridBody"></tbody>
-        </table>
+        <table id="gridTable"><thead id="gridHead"></thead><tbody id="gridBody"></tbody></table>
     </div>
-    <p style="font-size: 11px; color: #888; margin-top: 15px; text-align: center;">
-        <b>P</b> = Present (Hover to see In/Out times) | <b>A</b> = Absent
-    </p>
 </div>
 
 <script>
-    const APP_URL = "https://script.google.com/macros/s/AKfycbydz5CJmezarLWUsQVTpNBoHQ45aN1-Uaw35AUtFGd41evE_Atvy5eqFZOeE0JFu7NXDg/exec";
+    const APP_URL = "https://script.google.com/macros/s/AKfycbzWBekFACPf-cJ19ZZewxTlPYxhTmobVSzqPgTbN4Rf6Be2IIqnB35W7idUclPQc32jNA/exec";
 
-    // 1. Fetch names for the dropdown from 'Students' tab
     async function loadStudents() {
-        try {
-            const res = await fetch(`${APP_URL}?action=getStudents`);
-            const names = await res.json();
-            const select = document.getElementById('studentSelect');
-            select.innerHTML = '<option value="">-- Select Your Name --</option>';
-            
-            if (names && names.length > 0) {
-                names.forEach(name => {
-                    let opt = document.createElement('option');
-                    opt.value = name;
-                    opt.innerHTML = name;
-                    select.appendChild(opt);
-                });
-            } else {
-                select.innerHTML = '<option value="">No Names Found (Add in Admin)</option>';
-            }
-        } catch (e) {
-            console.error("Error loading students:", e);
-            document.getElementById('studentSelect').innerHTML = '<option value="">Error Connecting...</option>';
-        }
+        const res = await fetch(`${APP_URL}?action=getStudents`);
+        const names = await res.json();
+        const select = document.getElementById('studentSelect');
+        select.innerHTML = '<option value="">-- Select Your Name --</option>';
+        names.forEach(n => { let o = document.createElement('option'); o.value = n; o.innerHTML = n; select.appendChild(o); });
     }
 
-    // 2. Submit check-in or out
     async function submitAttendance(type) {
         const name = document.getElementById('studentSelect').value;
-        if (!name) return alert("Please select your name from the dropdown.");
-        
+        if (!name) return alert("Please select a name");
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-        
-        // Show immediate feedback
-        const originalText = event.target.innerText;
-        event.target.innerText = "SAVING...";
-        
-        try {
-            await fetch(`${APP_URL}?name=${encodeURIComponent(name)}&action=${type}&time=${encodeURIComponent(time)}`, { mode: 'no-cors' });
-            alert(`${name}: ${type.toUpperCase()} recorded successfully at ${time}`);
-        } catch (e) {
-            alert("Connection error. Please check your internet.");
-        } finally {
-            event.target.innerText = originalText;
-        }
+        fetch(`${APP_URL}?name=${encodeURIComponent(name)}&action=${type}&time=${encodeURIComponent(time)}`, { mode: 'no-cors' });
+        alert(`${name} recorded at ${time}`);
     }
 
-    // 3. Admin: Add new user
     async function addNewUser() {
-        const nameInput = document.getElementById('newUserName');
-        const name = nameInput.value.trim();
-        if (!name) return alert("Enter a full name.");
-        
-        const btn = document.querySelector('.add-btn');
-        btn.innerText = "Adding...";
-        
-        try {
-            await fetch(`${APP_URL}?name=${encodeURIComponent(name)}&action=addUser`, { mode: 'no-cors' });
-            alert("New student added successfully!");
-            nameInput.value = "";
-            loadStudents(); // Refresh the dropdown
-        } catch (e) {
-            alert("Failed to add user.");
-        } finally {
-            btn.innerText = "+ ADD NAME";
-        }
+        const name = document.getElementById('newUserName').value.trim();
+        if (!name) return;
+        await fetch(`${APP_URL}?name=${encodeURIComponent(name)}&action=addUser`, { mode: 'no-cors' });
+        alert("Added!"); document.getElementById('newUserName').value = ""; loadStudents();
     }
 
-    // 4. Admin: Open grid view
     function openAdmin() {
-        const pass = prompt("Enter Admin Password:");
-        if (pass === "1234") {
-            document.getElementById('adminView').style.display = "block";
-            fetchGrid();
-        } else {
-            alert("Unauthorized Access.");
-        }
+        if (prompt("Password:") === "1234") { document.getElementById('adminView').style.display = "block"; fetchGrid(); }
     }
 
-    // 5. Generate the Month Grid
     async function fetchGrid() {
         const tbody = document.getElementById('gridBody');
-        tbody.innerHTML = "<tr><td colspan='32'>Fetching records...</td></tr>";
+        tbody.innerHTML = "<tr><td>Loading Database...</td></tr>";
+        const res = await fetch(APP_URL);
+        const data = await res.json();
+        const now = new Date();
+        const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        
+        let h = `<tr><th class="name-col">Name</th>`;
+        for (let d = 1; d <= days; d++) h += `<th>${d}</th>`;
+        document.getElementById('gridHead').innerHTML = h + `</tr>`;
 
-        try {
-            const response = await fetch(APP_URL);
-            const data = await response.json();
-            
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            
-            // Header
-            let headHTML = `<tr><th class="name-col">Name</th>`;
-            for (let d = 1; d <= daysInMonth; d++) headHTML += `<th>${d}</th>`;
-            document.getElementById('gridHead').innerHTML = headHTML + `</tr>`;
+        const map = {}; 
+        data.slice(1).forEach(r => { 
+            if(!map[r[0]]) map[r[0]] = {}; 
+            map[r[0]][r[1]] = `In: ${r[2] || '--'} | Out: ${r[3] || '--'}`;
+        });
 
-            // Process Sheet Data
-            const attendanceMap = {}; 
-            data.slice(1).forEach(row => {
-                const name = row[0];
-                const dateKey = row[1];
-                if (!attendanceMap[name]) attendanceMap[name] = {};
-                attendanceMap[name][dateKey] = `In: ${row[2] || '--'} | Out: ${row[3] || '--'}`;
-            });
-
-            // Build Rows
-            let bodyHTML = "";
-            const students = Object.keys(attendanceMap).sort();
-            
-            if (students.length === 0) {
-                tbody.innerHTML = "<tr><td colspan='32'>No attendance logs found for this month.</td></tr>";
-                return;
+        let b = "";
+        Object.keys(map).sort().forEach(s => {
+            b += `<tr><td class="name-col">${s}</td>`;
+            for (let d = 1; d <= days; d++) {
+                const date = `${now.getMonth()+1}/${d}/${now.getFullYear()}`;
+                b += map[s][date] ? `<td class="p-status" data-time="${map[s][date]}">P</td>` : `<td class="a-status">A</td>`;
             }
-
-            students.forEach(student => {
-                bodyHTML += `<tr><td class="name-col">${student}</td>`;
-                for (let d = 1; d <= daysInMonth; d++) {
-                    const checkDate = `${month + 1}/${d}/${year}`;
-                    const log = attendanceMap[student][checkDate];
-                    bodyHTML += log ? `<td class="p-status" data-time="${log}">P</td>` : `<td class="a-status">A</td>`;
-                }
-                bodyHTML += `</tr>`;
-            });
-            tbody.innerHTML = bodyHTML;
-        } catch (e) {
-            tbody.innerHTML = "<tr><td colspan='32'>Error loading grid. Check browser console.</td></tr>";
-        }
+            b += `</tr>`;
+        });
+        tbody.innerHTML = b;
     }
 </script>
-
 </body>
 </html>
