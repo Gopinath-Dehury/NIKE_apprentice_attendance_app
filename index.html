@@ -3,18 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendance Grid with Times</title>
+    <title>Attendance System Pro</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
-        .box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); width: 100%; max-width: 350px; margin: 0 auto 20px; text-align: center; }
+        .box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); width: 100%; max-width: 380px; margin: 0 auto 30px; text-align: center; }
         h2 { margin-bottom: 20px; color: #4A90E2; }
-        input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
-        input:focus { border-color: #4A90E2; }
-        button { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; transition: opacity 0.2s; }
-        button:active { transform: scale(0.98); }
-        .in { background: #4A90E2; } .out { background: #50C878; } .adm { background: #9B9B9B; margin-top: 10px; }
+        select, input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
+        button { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; transition: transform 0.1s; }
+        button:active { transform: scale(0.97); }
+        .in { background: #4A90E2; } .out { background: #50C878; } .adm { background: #6c757d; margin-top: 10px; }
+        .add-btn { background: #f39c12; margin-top: 5px; width: auto; padding: 10px 20px; }
         
-        #adminView { display: none; background: white; padding: 20px; border-radius: 12px; overflow-x: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.08); }
+        #adminView { display: none; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); }
+        .admin-section { border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+        .scroll-table { overflow-x: auto; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
         th, td { border: 1px solid #eee; padding: 10px; text-align: center; min-width: 35px; position: relative; }
         th { background: #f8f9fa; color: #666; font-weight: 600; }
@@ -23,59 +25,93 @@
         .a-status { color: #dc3545; opacity: 0.25; }
         .name-col { text-align: left; min-width: 150px; font-weight: bold; position: sticky; left: 0; background: white; z-index: 2; border-right: 2px solid #ddd; }
 
-        /* Hover Tooltip Styling */
         .p-status:hover::after {
-            content: attr(data-time);
-            position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+            content: attr(data-time); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
             background: #333; color: white; padding: 6px 10px; border-radius: 5px;
             white-space: nowrap; font-size: 10px; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
     </style>
 </head>
-<body>
+<body onload="loadStudents()">
 
 <div class="box">
     <h2>Attendance</h2>
-    <input type="text" id="studentName" placeholder="Enter Full Name">
-    <button class="in" onclick="submitAttendance('checkin')">CHECK IN</button>
-    <button class="out" onclick="submitAttendance('checkout')">CHECK OUT</button>
-    <button class="adm" onclick="openAdmin()">ADMIN VIEW</button>
+    <select id="studentSelect">
+        <option value="">-- Loading Names... --</option>
+    </select>
+    <button class="in" onclick="submitAttendance('checkin')">LOG CHECK IN</button>
+    <button class="out" onclick="submitAttendance('checkout')">LOG CHECK OUT</button>
+    <button class="adm" onclick="openAdmin()">ADMIN PANEL</button>
 </div>
 
-<div id="adminView">
-    <h3 id="monthTitle" style="text-align:center; color: #4A90E2;">Monthly Report</h3>
-    <table id="gridTable">
-        <thead id="gridHead"></thead>
-        <tbody id="gridBody"></tbody>
-    </table>
-    <p style="font-size: 11px; color: #888; margin-top: 15px; text-align: center;">
-        * Hover over <b>'P'</b> to see In/Out times.
-    </p>
+<div id="adminView" class="box" style="max-width: 900px; text-align: left;">
+    <h3 style="text-align:center; color: #4A90E2;">Admin Dashboard</h3>
+    
+    <div class="admin-section">
+        <label><b>Add New User to Dropdown:</b></label>
+        <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
+            <input type="text" id="newUserName" placeholder="Full Name" style="margin-bottom: 0;">
+            <button class="add-btn" onclick="addNewUser()">+ ADD</button>
+        </div>
+    </div>
+
+    <div class="scroll-table">
+        <table id="gridTable">
+            <thead id="gridHead"></thead>
+            <tbody id="gridBody"></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
-    // Your provided Backend Link
+    // Your provided Backend URL
     const APP_URL = "https://script.google.com/macros/s/AKfycbxM7AxtyxkZ9PXdRYWHVm7NW-P3g88twU9NmYtm42OdAhqwv6xCZejlDfm8dpPCVLDqEA/exec";
 
-    async function submitAttendance(type) {
-        const name = document.getElementById('studentName').value.trim();
-        if (!name) return alert("Please enter name");
-        
-        // Formats time as 10:30 AM
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-        
+    // 1. Fetch names for the dropdown
+    async function loadStudents() {
         try {
-            // Using no-cors to prevent redirect issues
-            fetch(`${APP_URL}?name=${encodeURIComponent(name)}&action=${type}&time=${encodeURIComponent(time)}`, { mode: 'no-cors' });
-            alert(`${name}: ${type.toUpperCase()} recorded at ${time}`);
-            document.getElementById('studentName').value = "";
-        } catch (error) {
-            alert("Connection error. Data might not have saved.");
+            const res = await fetch(`${APP_URL}?action=getStudents`);
+            const names = await res.json();
+            const select = document.getElementById('studentSelect');
+            select.innerHTML = '<option value="">-- Select Your Name --</option>';
+            names.forEach(name => {
+                let opt = document.createElement('option');
+                opt.value = name;
+                opt.innerHTML = name;
+                select.appendChild(opt);
+            });
+        } catch (e) {
+            document.getElementById('studentSelect').innerHTML = '<option value="">Error Loading Names</option>';
         }
     }
 
+    // 2. Submit check-in or out
+    async function submitAttendance(type) {
+        const name = document.getElementById('studentSelect').value;
+        if (!name) return alert("Please select your name");
+        
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        
+        fetch(`${APP_URL}?name=${encodeURIComponent(name)}&action=${type}&time=${encodeURIComponent(time)}`, { mode: 'no-cors' });
+        alert(`${name}: ${type.toUpperCase()} recorded at ${time}`);
+    }
+
+    // 3. Admin Feature: Add user to database
+    async function addNewUser() {
+        const nameInput = document.getElementById('newUserName');
+        const name = nameInput.value.trim();
+        if (!name) return alert("Enter a name");
+        
+        fetch(`${APP_URL}?name=${encodeURIComponent(name)}&action=addUser`, { mode: 'no-cors' });
+        alert("User Added to Student List!");
+        nameInput.value = "";
+        loadStudents(); // Refresh the dropdown
+    }
+
+    // 4. Admin Feature: Open grid view
     function openAdmin() {
-        if (prompt("Admin Password:") === "1234") {
+        const pass = prompt("Admin Password:");
+        if (pass === "1234") {
             document.getElementById('adminView').style.display = "block";
             fetchGrid();
         } else {
@@ -83,9 +119,10 @@
         }
     }
 
+    // 5. Build Attendance Grid
     async function fetchGrid() {
         const tbody = document.getElementById('gridBody');
-        tbody.innerHTML = "<tr><td colspan='32'>Connecting to Database...</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='32'>Loading monthly report...</td></tr>";
 
         try {
             const response = await fetch(APP_URL);
@@ -96,54 +133,36 @@
             const month = now.getMonth();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             
-            document.getElementById('monthTitle').innerText = `${now.toLocaleString('default', { month: 'long' })} ${year}`;
-
-            // 1. Build Table Header (Days 1 to 31)
+            // Header
             let headHTML = `<tr><th class="name-col">Student Name</th>`;
             for (let d = 1; d <= daysInMonth; d++) headHTML += `<th>${d}</th>`;
             document.getElementById('gridHead').innerHTML = headHTML + `</tr>`;
 
-            // 2. Map Database rows for fast searching
+            // Data Map
             const attendanceMap = {}; 
-            // We skip index 0 because it's the Sheet Header
             data.slice(1).forEach(row => {
                 const name = row[0];
-                const dateKey = row[1]; // Expected "M/D/YYYY" from backend
-                const inTime = row[2] || '--';
-                const outTime = row[3] || '--';
-
+                const dateKey = row[1];
                 if (!attendanceMap[name]) attendanceMap[name] = {};
-                attendanceMap[name][dateKey] = `In: ${inTime} | Out: ${outTime}`;
+                attendanceMap[name][dateKey] = `In: ${row[2] || '--'} | Out: ${row[3] || '--'}`;
             });
 
-            // 3. Generate Rows for each Student
+            // Rows
             let bodyHTML = "";
-            const sortedStudents = Object.keys(attendanceMap).sort();
+            const students = Object.keys(attendanceMap).sort();
             
-            if (sortedStudents.length === 0) {
-                tbody.innerHTML = "<tr><td colspan='32'>No data found in Sheet1.</td></tr>";
-                return;
-            }
-
-            sortedStudents.forEach(student => {
+            students.forEach(student => {
                 bodyHTML += `<tr><td class="name-col">${student}</td>`;
                 for (let d = 1; d <= daysInMonth; d++) {
                     const checkDate = `${month + 1}/${d}/${year}`;
-                    const timeInfo = attendanceMap[student][checkDate];
-                    
-                    if (timeInfo) {
-                        bodyHTML += `<td class="p-status" data-time="${timeInfo}">P</td>`;
-                    } else {
-                        bodyHTML += `<td class="a-status">A</td>`;
-                    }
+                    const log = attendanceMap[student][checkDate];
+                    bodyHTML += log ? `<td class="p-status" data-time="${log}">P</td>` : `<td class="a-status">A</td>`;
                 }
                 bodyHTML += `</tr>`;
             });
             tbody.innerHTML = bodyHTML;
-
-        } catch (error) {
-            console.error(error);
-            tbody.innerHTML = "<tr><td colspan='32'>Error loading data. Check Web App permissions.</td></tr>";
+        } catch (e) {
+            tbody.innerHTML = "<tr><td colspan='32'>Error loading data.</td></tr>";
         }
     }
 </script>
