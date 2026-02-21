@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendance System Pro</title>
+    <title>Smart Attendance System</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
         .box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); width: 100%; max-width: 380px; margin: 0 auto 30px; text-align: center; }
@@ -14,9 +14,9 @@
         .in { background: #4A90E2; } .out { background: #50C878; } .adm { background: #6c757d; margin-top: 10px; }
         .add-btn { background: #f39c12; margin-top: 5px; width: auto; padding: 10px 20px; }
         
-        #adminView { display: none; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); }
-        .admin-section { border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
-        .scroll-table { overflow-x: auto; margin-top: 10px; }
+        #adminView { display: none; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); max-width: 950px; margin: 0 auto; }
+        .admin-section { border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; text-align: left; }
+        .scroll-table { overflow-x: auto; margin-top: 10px; border-radius: 8px; border: 1px solid #eee; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
         th, td { border: 1px solid #eee; padding: 10px; text-align: center; min-width: 35px; position: relative; }
         th { background: #f8f9fa; color: #666; font-weight: 600; }
@@ -25,6 +25,7 @@
         .a-status { color: #dc3545; opacity: 0.25; }
         .name-col { text-align: left; min-width: 150px; font-weight: bold; position: sticky; left: 0; background: white; z-index: 2; border-right: 2px solid #ddd; }
 
+        /* Hover Tooltip */
         .p-status:hover::after {
             content: attr(data-time); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
             background: #333; color: white; padding: 6px 10px; border-radius: 5px;
@@ -44,14 +45,14 @@
     <button class="adm" onclick="openAdmin()">ADMIN PANEL</button>
 </div>
 
-<div id="adminView" class="box" style="max-width: 900px; text-align: left;">
+<div id="adminView">
     <h3 style="text-align:center; color: #4A90E2;">Admin Dashboard</h3>
     
     <div class="admin-section">
         <label><b>Add New User to Dropdown:</b></label>
         <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
             <input type="text" id="newUserName" placeholder="Full Name" style="margin-bottom: 0;">
-            <button class="add-btn" onclick="addNewUser()">+ ADD</button>
+            <button class="add-btn" onclick="addNewUser()">+ ADD NAME</button>
         </div>
     </div>
 
@@ -61,68 +62,95 @@
             <tbody id="gridBody"></tbody>
         </table>
     </div>
+    <p style="font-size: 11px; color: #888; margin-top: 15px; text-align: center;">
+        <b>P</b> = Present (Hover to see In/Out times) | <b>A</b> = Absent
+    </p>
 </div>
 
 <script>
-    // Your provided Backend URL
-    const APP_URL = "https://script.google.com/macros/s/AKfycbxM7AxtyxkZ9PXdRYWHVm7NW-P3g88twU9NmYtm42OdAhqwv6xCZejlDfm8dpPCVLDqEA/exec";
+    const APP_URL = "https://script.google.com/macros/s/AKfycbydz5CJmezarLWUsQVTpNBoHQ45aN1-Uaw35AUtFGd41evE_Atvy5eqFZOeE0JFu7NXDg/exec";
 
-    // 1. Fetch names for the dropdown
+    // 1. Fetch names for the dropdown from 'Students' tab
     async function loadStudents() {
         try {
             const res = await fetch(`${APP_URL}?action=getStudents`);
             const names = await res.json();
             const select = document.getElementById('studentSelect');
             select.innerHTML = '<option value="">-- Select Your Name --</option>';
-            names.forEach(name => {
-                let opt = document.createElement('option');
-                opt.value = name;
-                opt.innerHTML = name;
-                select.appendChild(opt);
-            });
+            
+            if (names && names.length > 0) {
+                names.forEach(name => {
+                    let opt = document.createElement('option');
+                    opt.value = name;
+                    opt.innerHTML = name;
+                    select.appendChild(opt);
+                });
+            } else {
+                select.innerHTML = '<option value="">No Names Found (Add in Admin)</option>';
+            }
         } catch (e) {
-            document.getElementById('studentSelect').innerHTML = '<option value="">Error Loading Names</option>';
+            console.error("Error loading students:", e);
+            document.getElementById('studentSelect').innerHTML = '<option value="">Error Connecting...</option>';
         }
     }
 
     // 2. Submit check-in or out
     async function submitAttendance(type) {
         const name = document.getElementById('studentSelect').value;
-        if (!name) return alert("Please select your name");
+        if (!name) return alert("Please select your name from the dropdown.");
         
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
         
-        fetch(`${APP_URL}?name=${encodeURIComponent(name)}&action=${type}&time=${encodeURIComponent(time)}`, { mode: 'no-cors' });
-        alert(`${name}: ${type.toUpperCase()} recorded at ${time}`);
+        // Show immediate feedback
+        const originalText = event.target.innerText;
+        event.target.innerText = "SAVING...";
+        
+        try {
+            await fetch(`${APP_URL}?name=${encodeURIComponent(name)}&action=${type}&time=${encodeURIComponent(time)}`, { mode: 'no-cors' });
+            alert(`${name}: ${type.toUpperCase()} recorded successfully at ${time}`);
+        } catch (e) {
+            alert("Connection error. Please check your internet.");
+        } finally {
+            event.target.innerText = originalText;
+        }
     }
 
-    // 3. Admin Feature: Add user to database
+    // 3. Admin: Add new user
     async function addNewUser() {
         const nameInput = document.getElementById('newUserName');
         const name = nameInput.value.trim();
-        if (!name) return alert("Enter a name");
+        if (!name) return alert("Enter a full name.");
         
-        fetch(`${APP_URL}?name=${encodeURIComponent(name)}&action=addUser`, { mode: 'no-cors' });
-        alert("User Added to Student List!");
-        nameInput.value = "";
-        loadStudents(); // Refresh the dropdown
+        const btn = document.querySelector('.add-btn');
+        btn.innerText = "Adding...";
+        
+        try {
+            await fetch(`${APP_URL}?name=${encodeURIComponent(name)}&action=addUser`, { mode: 'no-cors' });
+            alert("New student added successfully!");
+            nameInput.value = "";
+            loadStudents(); // Refresh the dropdown
+        } catch (e) {
+            alert("Failed to add user.");
+        } finally {
+            btn.innerText = "+ ADD NAME";
+        }
     }
 
-    // 4. Admin Feature: Open grid view
+    // 4. Admin: Open grid view
     function openAdmin() {
-        const pass = prompt("Admin Password:");
+        const pass = prompt("Enter Admin Password:");
         if (pass === "1234") {
             document.getElementById('adminView').style.display = "block";
             fetchGrid();
         } else {
-            alert("Wrong password");
+            alert("Unauthorized Access.");
         }
     }
 
-    // 5. Build Attendance Grid
+    // 5. Generate the Month Grid
     async function fetchGrid() {
         const tbody = document.getElementById('gridBody');
-        tbody.innerHTML = "<tr><td colspan='32'>Loading monthly report...</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='32'>Fetching records...</td></tr>";
 
         try {
             const response = await fetch(APP_URL);
@@ -134,11 +162,11 @@
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             
             // Header
-            let headHTML = `<tr><th class="name-col">Student Name</th>`;
+            let headHTML = `<tr><th class="name-col">Name</th>`;
             for (let d = 1; d <= daysInMonth; d++) headHTML += `<th>${d}</th>`;
             document.getElementById('gridHead').innerHTML = headHTML + `</tr>`;
 
-            // Data Map
+            // Process Sheet Data
             const attendanceMap = {}; 
             data.slice(1).forEach(row => {
                 const name = row[0];
@@ -147,10 +175,15 @@
                 attendanceMap[name][dateKey] = `In: ${row[2] || '--'} | Out: ${row[3] || '--'}`;
             });
 
-            // Rows
+            // Build Rows
             let bodyHTML = "";
             const students = Object.keys(attendanceMap).sort();
             
+            if (students.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='32'>No attendance logs found for this month.</td></tr>";
+                return;
+            }
+
             students.forEach(student => {
                 bodyHTML += `<tr><td class="name-col">${student}</td>`;
                 for (let d = 1; d <= daysInMonth; d++) {
@@ -162,7 +195,7 @@
             });
             tbody.innerHTML = bodyHTML;
         } catch (e) {
-            tbody.innerHTML = "<tr><td colspan='32'>Error loading data.</td></tr>";
+            tbody.innerHTML = "<tr><td colspan='32'>Error loading grid. Check browser console.</td></tr>";
         }
     }
 </script>
